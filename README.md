@@ -1,3 +1,5 @@
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/d9a70ae2e26848efa51c316836fecc67)](https://app.codacy.com/gh/caracal-dev/caracal-audio-controller/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 # Caracal Audio Controller
 
 `caracal-audio-controller` is a small KDE tray utility for running Caracal OS audio maintenance commands without opening a terminal first.
