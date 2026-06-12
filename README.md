@@ -16,6 +16,8 @@ It is intentionally separate from `caracal-software-installer`: the installer is
 - restart PipeWire
 - create or remove Caracal virtual audio channels
 - open the Bluetooth headset profile toggle
+- enable or remove legacy JACK D-Bus compatibility
+- enable or remove legacy MIDI bridge setup
 - open Caracal Software Installer
 
 The yabridge reminder watches `~/.wine/drive_c/Program Files/Common Files/VST3` and records the last synced fingerprint in `~/.local/state/caracal-audio-controller/yabridge-vst3.fingerprint`.

@@ -95,6 +95,36 @@ ACTIONS = {
         command=("ujust", "toggle-bt-mic"),
         description="Enable or disable the Bluetooth headset profile mitigation.",
     ),
+    "legacy-audio-start": AudioAction(
+        key="legacy-audio-start",
+        title="Enable Legacy JACK D-Bus",
+        command=("ujust", "use-legacy-audio", "start"),
+        description="Enable JACK D-Bus compatibility for legacy JACK controllers.",
+    ),
+    "legacy-audio-remove": AudioAction(
+        key="legacy-audio-remove",
+        title="Remove Legacy JACK D-Bus",
+        command=("ujust", "use-legacy-audio", "remove"),
+        description="Disable and remove the Caracal JACK D-Bus compatibility service.",
+    ),
+    "legacy-midi-a2j": AudioAction(
+        key="legacy-midi-a2j",
+        title="Enable ALSA-to-JACK MIDI",
+        command=("ujust", "add-legacy-channels", "a2j"),
+        description="Enable the a2jmidid legacy MIDI bridge with hardware export.",
+    ),
+    "legacy-midi-native": AudioAction(
+        key="legacy-midi-native",
+        title="Enable Native PipeWire MIDI",
+        command=("ujust", "add-legacy-channels", "native"),
+        description="Enable PipeWire's native ALSA sequencer MIDI bridge.",
+    ),
+    "legacy-midi-remove": AudioAction(
+        key="legacy-midi-remove",
+        title="Remove Legacy MIDI Bridge",
+        command=("ujust", "add-legacy-channels", "remove"),
+        description="Disable and remove Caracal legacy MIDI bridge setup.",
+    ),
     "upgrade": AudioAction(
         key="upgrade",
         title="Update Caracal OS",
@@ -235,6 +265,22 @@ class AudioController(QObject):
         bt_item = QAction(ACTIONS["toggle-bt-mic"].title, menu)
         bt_item.triggered.connect(lambda: self.run_action("toggle-bt-mic"))
         menu.addAction(bt_item)
+
+        legacy_menu = menu.addMenu("Legacy Audio")
+        for key in ("legacy-audio-start", "legacy-audio-remove"):
+            action = ACTIONS[key]
+            item = QAction(action.title, legacy_menu)
+            item.setToolTip(action.description)
+            item.triggered.connect(lambda checked=False, action_key=key: self.run_action(action_key))
+            legacy_menu.addAction(item)
+
+        legacy_menu.addSeparator()
+        for key in ("legacy-midi-a2j", "legacy-midi-native", "legacy-midi-remove"):
+            action = ACTIONS[key]
+            item = QAction(action.title, legacy_menu)
+            item.setToolTip(action.description)
+            item.triggered.connect(lambda checked=False, action_key=key: self.run_action(action_key))
+            legacy_menu.addAction(item)
 
         menu.addSeparator()
         installer_item = QAction("Open Software Installer", menu)
