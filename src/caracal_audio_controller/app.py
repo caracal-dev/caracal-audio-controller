@@ -70,24 +70,18 @@ ACTIONS = {
         command=("ujust", "route-plugins"),
         description="Copy packaged system plugins into user scan directories.",
     ),
+    "clear-plugin-caches": AudioAction(
+        key="clear-plugin-caches",
+        title="Clear Plugin Caches",
+        command=("ujust", "clear-plugin-caches"),
+        description="Remove regenerated plugin convolution and cab cache files.",
+    ),
     "restart-pipewire": AudioAction(
         key="restart-pipewire",
         title="Restart PipeWire",
         command=("ujust", "restart-pipewire"),
         description="Restart the user PipeWire service.",
         terminal=False,
-    ),
-    "virtual-create": AudioAction(
-        key="virtual-create",
-        title="Create Virtual Channels",
-        command=("ujust", "setup-virtual-channels", "create"),
-        description="Create DAW, Monitoring, Recording, and System virtual sinks.",
-    ),
-    "virtual-remove": AudioAction(
-        key="virtual-remove",
-        title="Remove Virtual Channels",
-        command=("ujust", "setup-virtual-channels", "remove"),
-        description="Remove the Caracal virtual channel PipeWire config.",
     ),
     "toggle-bt-mic": AudioAction(
         key="toggle-bt-mic",
@@ -175,7 +169,7 @@ class StatusWindow(QMainWindow):
         layout.addWidget(header)
 
         quick_row = QHBoxLayout()
-        for key in ("update-audio", "route-plugins", "restart-pipewire", "upgrade"):
+        for key in ("update-audio", "route-plugins", "clear-plugin-caches", "restart-pipewire", "upgrade"):
             action = ACTIONS[key]
             button = QPushButton(action.title)
             button.clicked.connect(lambda checked=False, action_key=key: controller.run_action(action_key))
@@ -246,7 +240,7 @@ class AudioController(QObject):
 
     def _build_menu(self) -> QMenu:
         menu = QMenu()
-        for key in ("update-audio", "route-plugins", "restart-pipewire"):
+        for key in ("update-audio", "route-plugins", "clear-plugin-caches", "restart-pipewire"):
             action = ACTIONS[key]
             item = QAction(action.title, menu)
             item.setToolTip(action.description)
@@ -254,14 +248,6 @@ class AudioController(QObject):
             menu.addAction(item)
 
         menu.addSeparator()
-        create_item = QAction(ACTIONS["virtual-create"].title, menu)
-        create_item.triggered.connect(lambda: self.run_action("virtual-create"))
-        menu.addAction(create_item)
-
-        remove_item = QAction(ACTIONS["virtual-remove"].title, menu)
-        remove_item.triggered.connect(lambda: self.run_action("virtual-remove"))
-        menu.addAction(remove_item)
-
         bt_item = QAction(ACTIONS["toggle-bt-mic"].title, menu)
         bt_item.triggered.connect(lambda: self.run_action("toggle-bt-mic"))
         menu.addAction(bt_item)

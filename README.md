@@ -13,8 +13,8 @@ It is intentionally separate from `caracal-software-installer`: the installer is
 - switch to a notification tray icon when the Wine VST3 folder changes after the last recorded yabridge sync
 - notify when a new Caracal OS image is available
 - route packaged system plugins into user scan directories
+- clear regenerated plugin convolution and cab cache files
 - restart PipeWire
-- create or remove Caracal virtual audio channels
 - open the Bluetooth headset profile toggle
 - enable or remove legacy JACK D-Bus compatibility
 - enable or remove legacy MIDI bridge setup
