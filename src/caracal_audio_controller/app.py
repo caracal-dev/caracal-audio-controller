@@ -552,8 +552,8 @@ class AudioController(QObject):
 
 def find_terminal() -> str | None:
     preferred = [
-        "ghostty",
         "konsole",
+        "ghostty",
         os.environ.get("TERMINAL", "").strip(),
         "gnome-terminal",
         "ptyxis",
@@ -574,10 +574,10 @@ def find_terminal() -> str | None:
 def terminal_args(terminal: str, script: str) -> list[str]:
     name = Path(terminal).name
     home = str(Path.home())
-    if name == "ghostty":
-        return ["--working-directory", home, "-e", "bash", "-lc", script]
     if name == "konsole":
         return ["--workdir", home, "-e", "bash", "-lc", script]
+    if name == "ghostty":
+        return ["--working-directory", home, "-e", "bash", "-lc", script]
     if name in {"gnome-terminal", "ptyxis", "mate-terminal"}:
         return ["--working-directory", home, "--", "bash", "-lc", script]
     if name == "kgx":
