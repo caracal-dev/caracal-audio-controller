@@ -577,7 +577,7 @@ def terminal_args(terminal: str, script: str) -> list[str]:
     if name == "konsole":
         return ["--workdir", home, "-e", "bash", "-lc", script]
     if name == "ghostty":
-        return ["--working-directory", home, "-e", "bash", "-lc", script]
+        return ["--working-directory=" + home, "-e", "bash", "-lc", script]
     if name in {"gnome-terminal", "ptyxis", "mate-terminal"}:
         return ["--working-directory", home, "--", "bash", "-lc", script]
     if name == "kgx":
