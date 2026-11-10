@@ -1,0 +1,20 @@
+@dataclass(frozen=True)
+class AudioAction:
+    key: str
+    title: str
+    command: tuple[str, ...]
+    description: str
+    terminal: bool = True
+
+
+@dataclass(frozen=True)
+class UjustCommand:
+    """A ujust command shown in the Advanced section."""
+    key: str
+    title: str
+    command: tuple[str, ...]
+    description: str
+    is_toggle: bool = False
+    """For toggles, a bash snippet that prints '1' when enabled/enforced, '0' otherwise."""
+    check_state: str | None = None
+    terminal: bool = True

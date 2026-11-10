@@ -57,6 +57,18 @@ class AudioAction:
     terminal: bool = True
 
 
+@dataclass(frozen=True)
+class UjustCommand:
+    """A ujust command shown in the Advanced section."""
+    key: str
+    title: str
+    command: tuple[str, ...]
+    description: str
+    is_toggle: bool = False
+    check_state: str | None = None
+    terminal: bool = True
+
+
 ACTIONS = {
     "update-audio": AudioAction(
         key="update-audio",
@@ -128,9 +140,165 @@ ACTIONS = {
 }
 
 
-class StatusBus(QObject):
-    log = Signal(str)
-    direct_finished = Signal(str, int, str)
+UJUST_COMMANDS = {
+    # ── Audio ────────────────────────────────────────────────────
+    "restart-pipewire": UjustCommand(
+        key="restart-pipewire", title="Restart PipeWire",
+        command=("ujust", "restart-pipewire"),
+        description="Restart PipeWire + WirePlumber + PipeWire-Pulse.",
+    ),
+    "setup-audio-profiles": UjustCommand(
+        key="setup-audio-profiles", title="Setup Audio Profiles",
+        command=("ujust", "setup-audio-profiles"),
+        description="Switch USB audio interfaces to Pro Audio profiles for DAWs.",
+    ),
+    "cpu-performance": UjustCommand(
+        key="cpu-performance", title="CPU Performance Mode",
+        command=("ujust", "cpu-performance"),
+        description="Reapply CPU performance governor for low-latency DAW work.",
+    ),
+    "update-audio-firmware": UjustCommand(
+        key="update-audio-firmware", title="Update Audio Firmware",
+        command=("ujust", "update-audio-firmware"),
+        description="Check for audio interface firmware updates via LVFS.",
+    ),
+    "carla-connect": UjustCommand(
+        key="carla-connect", title="Connect Carla Ports",
+        command=("ujust", "carla-connect"),
+        description="Auto-connect Carla plugin ports to audio sink/source.",
+    ),
+    "setup-audio": UjustCommand(
+        key="setup-audio", title="Setup Wine + Yabridge",
+        command=("ujust", "setup-audio"),
+        description="Init Wine prefix, verify WoW64, configure yabridge.",
+    ),
+    "yabridge-setup": UjustCommand(
+        key="yabridge-setup", title="Yabridge Setup",
+        command=("ujust", "yabridge-setup"),
+        description="Initialize Wine + yabridgectl for the current user.",
+    ),
+    "install-windows-fonts": UjustCommand(
+        key="install-windows-fonts", title="Install Windows Fonts",
+        command=("ujust", "install-windows-fonts"),
+        description="Install core Windows fonts (Arial, Times New Roman) via winetricks.",
+    ),
+    "clear-plugin-caches": UjustCommand(
+        key="clear-plugin-caches", title="Clear Plugin Caches",
+        command=("ujust", "clear-plugin-caches"),
+        description="Remove regenerated plugin convolution and cab cache files.",
+    ),
+    "route-plugins": UjustCommand(
+        key="route-plugins", title="Route System Plugins",
+        command=("ujust", "route-plugins"),
+        description="Copy packaged system plugins into user scan directories.",
+    ),
+    # ── Bluetooth Toggle ────────────────────────────────────────
+    "toggle-bt-mic": UjustCommand(
+        key="toggle-bt-mic", title="Bluetooth Headset",
+        command=("ujust", "toggle-bt-mic"),
+        description="Toggle Bluetooth headset profile mitigation (A2DP vs HFP/HSP).",
+        is_toggle=True,
+        check_state="test -f /etc/wireplumber/wireplumber.conf.d/51-mitigate-annoying-profile-switch.conf && echo 1 || echo 0",
+    ),
+    # ── Virtual Channels ────────────────────────────────────────
+    "setup-virtual-channels": UjustCommand(
+        key="setup-virtual-channels", title="Virtual Channels",
+        command=("ujust", "setup-virtual-channels"),
+        description="Create or remove PipeWire virtual loopback sinks (DAW, Monitoring, Recording, System).",
+        is_toggle=True,
+        check_state="test -f \"${XDG_CONFIG_HOME:-$HOME/.config}/pipewire/pipewire.conf.d/virtual-channels.conf\" && echo 1 || echo 0",
+    ),
+    # ── Legacy Audio ────────────────────────────────────────────
+    "use-legacy-audio-start": UjustCommand(
+        key="use-legacy-audio-start", title="Start JACK D-Bus",
+        command=("ujust", "use-legacy-audio", "start"),
+        description="Enable JACK D-Bus compatibility for legacy JACK controllers.",
+        is_toggle=True,
+        check_state="systemctl --user is-enabled caracal-jackdbus.service 2>/dev/null && echo 1 || echo 0",
+    ),
+    "use-legacy-audio-remove": UjustCommand(
+        key="use-legacy-audio-remove", title="Stop JACK D-Bus",
+        command=("ujust", "use-legacy-audio", "remove"),
+        description="Disable and remove JACK D-Bus compatibility service.",
+    ),
+    "add-legacy-channels-a2j": UjustCommand(
+        key="add-legacy-channels-a2j", title="ALSA-to-JACK MIDI",
+        command=("ujust", "add-legacy-channels", "a2j"),
+        description="Enable a2jmidid legacy MIDI bridge with hardware export.",
+        is_toggle=True,
+        check_state="systemctl --user is-enabled caracal-a2jmidid.service 2>/dev/null && echo 1 || echo 0",
+    ),
+    "add-legacy-channels-native": UjustCommand(
+        key="add-legacy-channels-native", title="Native PipeWire MIDI",
+        command=("ujust", "add-legacy-channels", "native"),
+        description="Enable PipeWire's native ALSA sequencer MIDI bridge.",
+        is_toggle=True,
+        check_state="test -f \"${XDG_CONFIG_HOME:-$HOME/.config}/pipewire/pipewire.conf.d/legacy-midi-bridge.conf\" && echo 1 || echo 0",
+    ),
+    "add-legacy-channels-remove": UjustCommand(
+        key="add-legacy-channels-remove", title="Remove MIDI Bridges",
+        command=("ujust", "add-legacy-channels", "remove"),
+        description="Disable and remove all legacy MIDI bridge setup.",
+    ),
+    # ── Plugins ──────────────────────────────────────────────────
+    "plugin-diagnose": UjustCommand(
+        key="plugin-diagnose", title="Plugin Diagnostics",
+        command=("ujust", "plugin-diagnose"),
+        description="Scan Windows VSTs for license wrapper patterns and apply tuning.",
+    ),
+    "vst-iso": UjustCommand(
+        key="vst-iso", title="REAPER VST Bridge",
+        command=("ujust", "vst-iso"),
+        description="Enable/disable yabridge bridge flag in REAPER VST config.",
+        is_toggle=True,
+        check_state="grep -q '<BRG' \"$HOME/.config/REAPER/reaper-vstplugins64.ini\" 2>/dev/null && echo 1 || echo 0",
+    ),
+    "juce-fix": UjustCommand(
+        key="juce-fix", title="JUCE Graphics Fix",
+        command=("ujust", "juce-fix"),
+        description="Fix JUCE plugin GUI rendering (DXVK clamp, virtual desktop, or reset).",
+    ),
+    # ── System ───────────────────────────────────────────────────
+    "caracal-cli": UjustCommand(
+        key="caracal-cli", title="CLI Bling",
+        command=("ujust", "caracal-cli"),
+        description="Enable/disable enhanced CLI tools (eza, atuin, zoxide, ugrep).",
+        is_toggle=True,
+        check_state="shell=\"$(basename \"$SHELL\" 2>/dev/null)\"; case \"$shell\" in fish) c=\"${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish\" ;; zsh) c=\"${ZDOTDIR:-$HOME}/.zshrc\" ;; *) c=\"$HOME/.bashrc\" ;; esac; grep -q 'bling' \"$c\" 2>/dev/null && echo 1 || echo 0",
+    ),
+    "dx-group": UjustCommand(
+        key="dx-group", title="Developer Groups",
+        command=("ujust", "dx-group"),
+        description="Add user to Docker, Incus, libvirt, dialout groups.",
+    ),
+    "setup-virtualization": UjustCommand(
+        key="setup-virtualization", title="Virtualization",
+        command=("ujust", "setup-virtualization"),
+        description="Enable/disable libvirt, VFIO kernel args, USB hot plugging.",
+        is_toggle=True,
+        check_state="systemctl is-enabled libvirtd.service 2>/dev/null && echo 1 || echo 0",
+    ),
+    "setup-vm-env": UjustCommand(
+        key="setup-vm-env", title="Setup VM Environment",
+        command=("ujust", "setup-vm-env"),
+        description="One-shot VM environment setup (libvirt, kernel args, ISO dir).",
+    ),
+    "reinstall-flatpaks": UjustCommand(
+        key="reinstall-flatpaks", title="Reinstall Flatpaks",
+        command=("ujust", "reinstall-flatpaks"),
+        description="Install recommended Caracal OS flatpaks.",
+    ),
+}
+
+
+def ujust_toggle_label(state: bool | None) -> str:
+    """Return a short label for a toggle state."""
+    if state is None:
+        return "…"
+    return "ON" if state else "OFF"
+
+
+    states_changed = Signal(dict)
 
 
 class StatusWindow(QMainWindow):
@@ -176,6 +344,52 @@ class StatusWindow(QMainWindow):
             quick_row.addWidget(button)
         layout.addLayout(quick_row)
 
+        # ── Advanced section ─────────────────────────────────
+        self.advanced_buttons: dict[str, QPushButton] = {}
+        self.advanced_visible = False
+
+        self.advanced_toggle = QPushButton("▶  Advanced")
+        self.advanced_toggle.setObjectName("advancedToggle")
+        self.advanced_toggle.setCheckable(True)
+        self.advanced_toggle.clicked.connect(self._toggle_advanced)
+        self.advanced_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        layout.addWidget(self.advanced_toggle)
+
+        self.advanced_panel = QFrame()
+        self.advanced_panel.setObjectName("advancedPanel")
+        adv_layout = QVBoxLayout(self.advanced_panel)
+        adv_layout.setContentsMargins(0, 0, 0, 0)
+        adv_layout.setSpacing(8)
+
+        # Legacy Audio
+        legacy_keys = ["use-legacy-audio-start", "use-legacy-audio-remove",
+                       "add-legacy-channels-a2j", "add-legacy-channels-native",
+                       "add-legacy-channels-remove"]
+        legacy_group = self._build_ujust_group("Legacy Audio", legacy_keys)
+        adv_layout.addWidget(legacy_group)
+
+        # Audio
+        audio_keys = ["setup-audio-profiles", "cpu-performance", "update-audio-firmware",
+                      "carla-connect", "setup-audio", "yabridge-setup", "install-windows-fonts",
+                      "setup-virtual-channels", "toggle-bt-mic"]
+        audio_group = self._build_ujust_group("Audio", audio_keys)
+        adv_layout.addWidget(audio_group)
+
+        # Plugins
+        plugin_keys = ["plugin-diagnose", "vst-iso", "juce-fix",
+                       "clear-plugin-caches", "route-plugins"]
+        plugin_group = self._build_ujust_group("Plugins", plugin_keys)
+        adv_layout.addWidget(plugin_group)
+
+        # System
+        system_keys = ["caracal-cli", "setup-virtualization", "setup-vm-env",
+                       "dx-group", "reinstall-flatpaks"]
+        system_group = self._build_ujust_group("System", system_keys)
+        adv_layout.addWidget(system_group)
+
+        self.advanced_panel.setVisible(False)
+        layout.addWidget(self.advanced_panel)
+
         self.status = QLabel("Idle. Left-click the tray icon to sync Windows VSTs.")
         self.status.setObjectName("muted")
         layout.addWidget(self.status)
@@ -188,9 +402,46 @@ class StatusWindow(QMainWindow):
         self.setCentralWidget(root)
         self.setStyleSheet(build_stylesheet())
 
-    def append_log(self, message: str) -> None:
-        self.log.append(message)
-        self.status.setText(message)
+    def _build_ujust_group(self, title: str, keys: list[str]) -> QGroupBox:
+        group = QGroupBox(title)
+        group.setObjectName("sectionGroup")
+        gl = QVBoxLayout(group)
+        gl.setContentsMargins(10, 18, 10, 10)
+        gl.setSpacing(4)
+        for k in keys:
+            cmd = UJUST_COMMANDS[k]
+            text = cmd.title
+            if cmd.is_toggle:
+                text += "  …"
+            btn = QPushButton(text)
+            btn.setObjectName("ujustButton")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda checked=False, ck=k: self._run_ujust_command(ck))
+            gl.addWidget(btn)
+            self.advanced_buttons[k] = btn
+        return group
+
+    def _toggle_advanced(self) -> None:
+        self.advanced_visible = not self.advanced_visible
+        self.advanced_panel.setVisible(self.advanced_visible)
+        prefix = "▼" if self.advanced_visible else "▶"
+        self.advanced_toggle.setText(f"{prefix}  Advanced")
+
+    def _run_ujust_command(self, key: str) -> None:
+        self.controller.run_ujust(key)
+
+    def update_ujust_states(self, states: dict[str, bool | None]) -> None:
+        for key, state in states.items():
+            btn = self.advanced_buttons.get(key)
+            if btn is None:
+                continue
+            cmd = UJUST_COMMANDS.get(key)
+            if cmd is None or not cmd.is_toggle:
+                continue
+            label = ujust_toggle_label(state)
+            # Replace any existing state label
+            base = cmd.title
+            btn.setText(f"{base}  {label}")
 
 
 class AudioController(QObject):
@@ -225,6 +476,12 @@ class AudioController(QObject):
         self.caracal_update_timer = QTimer(self)
         self.caracal_update_timer.setInterval(CARACAL_UPDATE_CHECK_INTERVAL_MS)
         self.caracal_update_timer.timeout.connect(self.scan_caracal_update_state)
+        self.ujust_state_cache: dict[str, bool | None] = {}
+        self.ujust_state_process: QProcess | None = None
+        self.ujust_timer = QTimer(self)
+        self.ujust_timer.setInterval(15_000)
+        self.ujust_timer.timeout.connect(self._check_all_ujust_toggles)
+        self.bus.states_changed.connect(self.window.update_ujust_states)
 
     def start(self) -> int:
         if not QSystemTrayIcon.isSystemTrayAvailable():
@@ -236,6 +493,8 @@ class AudioController(QObject):
         QTimer.singleShot(CARACAL_UPDATE_INITIAL_CHECK_MS, self.scan_caracal_update_state)
         self.yabridge_timer.start()
         self.caracal_update_timer.start()
+        self.ujust_timer.start()
+        QTimer.singleShot(3000, self._check_all_ujust_toggles)
         return self.app.exec()
 
     def _build_menu(self) -> QMenu:
@@ -308,6 +567,12 @@ class AudioController(QObject):
             self._run_in_terminal(action)
         else:
             self._run_direct(action)
+
+    def run_ujust(self, key: str) -> None:
+        """Run a ujust command from the Advanced section."""
+        cmd = UJUST_COMMANDS[key]
+        self._append_log(f"Starting: {cmd.title}")
+        self._run_ujust_in_terminal(cmd)
 
     def show_status(self) -> None:
         self.window.show()
@@ -422,6 +687,107 @@ class AudioController(QObject):
             icon = QSystemTrayIcon.Critical
         self._append_log(message)
         self.tray.showMessage(APP_NAME, message, icon, 4500)
+
+    def _run_ujust_in_terminal(self, cmd: UjustCommand) -> None:
+        terminal = find_terminal()
+        if terminal is None:
+            self._append_log("No supported terminal emulator was found.")
+            self.tray.showMessage(APP_NAME, "No supported terminal emulator was found.", QSystemTrayIcon.Critical, 5000)
+            return
+
+        command_text = " ".join(shlex.quote(part) for part in cmd.command)
+        script = "\n".join(
+            [
+                "printf '\\nCaracal Audio Controller\\n========================\\n\\n'",
+                f"echo {shlex.quote(cmd.title)}",
+                "echo",
+                command_text,
+                "status=$?",
+                "echo",
+                "if [ \"$status\" -eq 0 ]; then",
+                "  echo 'Action completed successfully.'",
+                "else",
+                "  echo \"Action failed with exit code $status.\"",
+                "fi",
+                "echo",
+                "read -r -n 1 -s -p 'Press any key to close this window...'",
+                "echo",
+                "exit \"$status\"",
+            ]
+        )
+
+        args = terminal_args(terminal, script)
+        process = QProcess(self)
+        process.setProgram(terminal)
+        process.setArguments(args)
+        process.setWorkingDirectory(str(Path.home()))
+        process.finished.connect(
+            lambda code, status, proc=process, key=cmd.key: self._ujust_terminal_finished(proc, key, code)
+        )
+        self.processes.append(process)
+        process.start()
+        if not process.waitForStarted(3000):
+            self._append_log(f"Could not launch {terminal}.")
+            self.tray.showMessage(APP_NAME, f"Could not launch {terminal}.", QSystemTrayIcon.Critical, 5000)
+            self.processes.remove(process)
+            return
+
+        self._append_log(f"Launched terminal for: {' '.join(cmd.command)}")
+        self.tray.showMessage(APP_NAME, f"Running {cmd.title}.", QSystemTrayIcon.Information, 3000)
+
+    def _ujust_terminal_finished(self, process: QProcess, key: str, exit_code: int) -> None:
+        if process in self.processes:
+            self.processes.remove(process)
+        if exit_code != 0:
+            self._append_log(f"{UJUST_COMMANDS[key].title} exited with code {exit_code}.")
+        else:
+            self._append_log(f"{UJUST_COMMANDS[key].title} completed.")
+        # Refresh toggle states after any ujust run
+        self._check_all_ujust_toggles()
+
+    # ── Toggle state checking ────────────────────────────────────
+
+    def _check_all_ujust_toggles(self) -> None:
+        if self.ujust_state_process is not None:
+            return
+
+        # Build a single script that checks all toggle commands
+        checks: list[str] = []
+        for key, cmd in UJUST_COMMANDS.items():
+            if cmd.is_toggle and cmd.check_state:
+                checks.append(f'{key}=$({cmd.check_state})')
+
+        if not checks:
+            return
+
+        script = "\n".join(checks)
+        process = QProcess(self)
+        process.setProgram("bash")
+        process.setArguments(["-c", script])
+        process.setWorkingDirectory(str(Path.home()))
+        process.setProcessChannelMode(QProcess.MergedChannels)
+        process.finished.connect(lambda code, status, proc=process: self._ujust_state_check_finished(proc, code))
+        self.ujust_state_process = process
+        process.start()
+
+    def _ujust_state_check_finished(self, process: QProcess, exit_code: int) -> None:
+        if self.ujust_state_process is not process:
+            return
+        self.ujust_state_process = None
+
+        output = bytes(process.readAllStandardOutput()).decode(errors="replace").strip()
+        changed = False
+        for line in output.splitlines():
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            state = value.strip() == "1"
+            if self.ujust_state_cache.get(key) != state:
+                self.ujust_state_cache[key] = state
+                changed = True
+
+        if changed:
+            self.bus.states_changed.emit(dict(self.ujust_state_cache))
 
     def scan_yabridge_state(self, show_clear_message: bool = False) -> None:
         fingerprint, item_count = yabridge_fingerprint()
@@ -808,6 +1174,53 @@ def build_stylesheet() -> str:
         }}
         QMenu::item:selected {{
             background: rgba(127, 180, 202, 46);
+        }}
+        QPushButton#advancedToggle {{
+            min-height: 32px;
+            padding: 0 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(138, 164, 176, 51);
+            background: {PANEL};
+            color: {MUTED};
+            font-weight: 600;
+            text-align: left;
+        }}
+        QPushButton#advancedToggle:hover {{
+            border-color: {INFO};
+            color: {TEXT};
+        }}
+        QFrame#advancedPanel {{
+            background: transparent;
+        }}
+        QGroupBox#sectionGroup {{
+            background: {PANEL};
+            border: 1px solid rgba(138, 164, 176, 40);
+            border-radius: 14px;
+            margin-top: 8px;
+            padding-top: 4px;
+            font-weight: 600;
+            color: {MUTED};
+        }}
+        QGroupBox#sectionGroup::title {{
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 2px 10px;
+            color: {ACCENT};
+        }}
+        QPushButton#ujustButton {{
+            min-height: 28px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(126, 156, 216, 51);
+            background: rgba(126, 156, 216, 15);
+            color: {TEXT};
+            font-size: 12px;
+            font-weight: 500;
+            text-align: left;
+        }}
+        QPushButton#ujustButton:hover {{
+            border-color: {INFO};
+            background: rgba(127, 180, 202, 35);
         }}
     """
 

@@ -1,5 +1,5 @@
 %global debug_package %{nil}
-%global upstream_version %{?version_override}%{!?version_override:0.7.4}
+%global upstream_version %{?version_override}%{!?version_override:0.7.5}
 %global github_owner %{?github_owner_override}%{!?github_owner_override:caracal-os}
 %global github_repo %{?github_repo_override}%{!?github_repo_override:caracal-audio-controller}
 %global source_tag %{?source_tag_override}%{!?source_tag_override:v%{upstream_version}}
@@ -22,7 +22,7 @@ Requires:       python3-pyside6
 caracal-audio-controller provides a KDE system tray icon for running Caracal OS
 audio maintenance recipes such as yabridge sync, PipeWire restart, virtual
 channel setup, and system plugin routing.
-
+Dahiya
 %prep
 %autosetup -n %{source_dir_name}
 
