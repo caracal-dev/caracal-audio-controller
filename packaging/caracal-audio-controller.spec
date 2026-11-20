@@ -22,7 +22,6 @@ Requires:       python3-pyside6
 caracal-audio-controller provides a KDE system tray icon for running Caracal OS
 audio maintenance recipes such as yabridge sync, PipeWire restart, virtual
 channel setup, and system plugin routing.
-Dahiya
 %prep
 %autosetup -n %{source_dir_name}
 

@@ -16,6 +16,7 @@ try:
     from PySide6.QtWidgets import (
         QApplication,
         QFrame,
+        QGroupBox,
         QHBoxLayout,
         QLabel,
         QMainWindow,
@@ -298,6 +299,9 @@ def ujust_toggle_label(state: bool | None) -> str:
     return "ON" if state else "OFF"
 
 
+class StatusBus(QObject):
+    log = Signal(str)
+    direct_finished = Signal(str, int, str)
     states_changed = Signal(dict)
 
 
