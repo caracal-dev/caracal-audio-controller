@@ -434,6 +434,10 @@ class StatusWindow(QMainWindow):
     def _run_ujust_command(self, key: str) -> None:
         self.controller.run_ujust(key)
 
+    def append_log(self, message: str) -> None:
+        self.log.append(message)
+        self.status.setText(message)
+
     def update_ujust_states(self, states: dict[str, bool | None]) -> None:
         for key, state in states.items():
             btn = self.advanced_buttons.get(key)
